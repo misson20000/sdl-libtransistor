@@ -1,0 +1,54 @@
+language: c
+sudo: false
+env:
+  global:
+    - LIBTRANSISTOR_VERSION=v1.2.2
+    - LIBTRANSISTOR_HOME=$TRAVIS_BUILD_DIR/transistor
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-5.0
+    packages:
+      - clang-5.0
+      - llvm-5.0
+      - llvm-5.0-dev
+      - lld-5.0
+      - liblz4-dev
+      - squashfs-tools
+      - graphviz
+      - python3
+      - python3-pip
+      - jq
+
+install:
+  # Set postfix variable
+  - export LLVM_POSTFIX=-5.0
+  # Fix python
+  - pip3 install --user --upgrade pip setuptools wheel
+  # Install libtransistor
+  - wget -nv https://github.com/reswitched/libtransistor/releases/download/$LIBTRANSISTOR_VERSION/libtransistor_$LIBTRANSISTOR_VERSION.tar.gz
+  - mkdir $LIBTRANSISTOR_HOME
+  - tar xzf libtransistor_$LIBTRANSISTOR_VERSION.tar.gz -C $LIBTRANSISTOR_HOME
+  - pip3 install --user -r $LIBTRANSISTOR_HOME/requirements.txt
+
+script:
+  - make DESTDIR=$TRAVIS_BUILD_DIR/dist -f switch.mk
+
+after_success:
+  - cd dist/
+  - tar czvf ../libtransistor-sdl2_$TRAVIS_TAG.tar.gz ./
+  - zip -r ../libtransistor-sdl2_$TRAVIS_TAG.zip ./
+  - cd ../
+
+deploy:
+  - provider: releases
+    api_key: $GITHUB_TOKEN
+    file:
+      - "libtransistor-sdl2_$TRAVIS_TAG.tar.gz"
+      - "libtransistor-sdl2_$TRAVIS_TAG.zip"
+    skip-cleanup: true
+    draft: true
+    tag_name: $TRAVIS_TAG
+    on:
+      tags: true
